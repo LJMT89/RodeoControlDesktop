@@ -11,8 +11,9 @@ class LanzarServidor(QMainWindow):
 
         self.process = None  # Guarda una referencia al proceso para poder detenerlo
         self.txt_consola = None
-        self.script_path = '/home/jose/Escritorio/lanzar_rodeo.sh'
+        self.script_path = '/media/jose/90980D73980D58DC/IDEAFIX/RodeoControl/Recursos/Script_Lanzador_Server/lanzar_rodeo.sh'
         self.ip_local = ''
+        self.puerto = 8000
 
         self.init_ui()
 
@@ -50,6 +51,9 @@ class LanzarServidor(QMainWindow):
             self.ip_local = f'{self.ip_local}:8000'
         else:
             self.ip_local = "Sin conexión"
+        
+        if self.puerto_en_uso(self.puerto):
+            self.kill_port(self.puerto)
 
         self.txt_consola.clear()
         self.process = QProcess(self)
@@ -59,35 +63,24 @@ class LanzarServidor(QMainWindow):
         self.process.start(f'bash {self.script_path}')
 
     def read_output(self):
-        output = self.process.readAllStandardOutput().data().decode('utf-8')
-        self.txt_consola.appendPlainText(output)
         self.btn_desconectado.setVisible(False)
         self.lbl_ip_local.setText(self.ip_local)
+        output = self.process.readAllStandardOutput().data().decode('utf-8')
+        self.txt_consola.appendPlainText(output)
 
     def script_finished(self, exit_code, exit_status):
-        self.txt_consola.appendPlainText(f"Script execution finished with exit code {exit_code}")
         self.btn_desconectado.setVisible(True)
         self.btn_lanzar_server.setEnabled(True)
         self.btn_detener_server.setEnabled(False)
         self.lbl_ip_local.setText('......')
+        self.txt_consola.appendPlainText(f"Script execution finished with exit code {exit_code}")
 
     def stop_script_execution(self):
-        self.btn_desconectado.setVisible(True)
-        self.btn_lanzar_server.setEnabled(True)
-        self.btn_detener_server.setEnabled(False)
-        self.process_deactivate = QProcess(self)
-        self.process_kill_port = QProcess(self)
-        self.process_deactivate.start('deactivate')
+        self.desactivar_venv()
         if self.process and self.process.state() == QProcess.Running:
             # Envía la señal de terminación al proceso
             self.process.terminate()
-        self.process_kill_port.start('fuser -k 8000/tcp')
-        if self.process_deactivate and self.process_deactivate.state() == QProcess.Running:
-            # Envía la señal de terminación al proceso
-            self.process_deactivate.terminate()
-        if self.process_kill_port and self.process_kill_port.state() == QProcess.Running:
-            # Envía la señal de terminación al proceso
-            self.process_kill_port.terminate()
+        self.kill_port(self.puerto)
 
     def obtener_ip_local(self):
         try:
@@ -102,6 +95,25 @@ class LanzarServidor(QMainWindow):
             print(f"Error al obtener la IP local: {e}")
         
         return None
+    
+    def puerto_en_uso(self, numero_puerto):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        resultado = sock.connect_ex(('localhost', numero_puerto))
+        sock.close()
+        return resultado == 0
+    
+    def desactivar_venv(self):
+        self.process_deactivate = QProcess(self)
+        self.process_deactivate.start('deactivate')
+        if self.process_deactivate and self.process_deactivate.state() == QProcess.Running:
+            # Envía la señal de terminación al proceso
+            self.process_deactivate.terminate()
+    
+    def kill_port(self, puerto):
+        self.process_kill_port = QProcess(self)
+        self.process_kill_port.start(f'fuser -k {puerto}/tcp')
+        if self.process_kill_port and self.process_kill_port.state() == QProcess.Running:
+            self.process_kill_port.terminate()
 
     #Función que finaliza la aplicación - Salir
     def salir_function(self):
