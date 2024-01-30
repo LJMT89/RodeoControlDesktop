@@ -2,7 +2,7 @@ import sys, os, socket, subprocess
 from PyQt5 import uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QTextEdit, QPlainTextEdit, QFileDialog, QDesktopWidget
 from PyQt5.QtCore import QProcess, Qt
-# from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 
 basedir = os.path.dirname(__file__)
 
@@ -18,7 +18,12 @@ class LanzarServidor(QMainWindow):
         self.ip_local = ''
         self.puerto = 8000
         # Configuración del ícono de la aplicación
-        # self.setWindowIcon(QIcon('.\image\la_travesada_48.ico'))
+        # Ruta del archivo de imagen
+        ruta_imagen = os.path.join(basedir, "image", "la_travesada_48.ico")
+        # Crear un QPixmap a partir del archivo de imagen
+        pixmap = QPixmap(ruta_imagen)
+        # Crear un QIcon a partir del QPixmap
+        icono = QIcon(pixmap)
 
         self.init_ui()
 
@@ -27,7 +32,7 @@ class LanzarServidor(QMainWindow):
         self.ui_ppal = uic.loadUi(os.path.join(basedir, "ui", "principal.ui"), self)
 
         # Personalizar el marco de las ventanas para que solo muestre un título
-        self.ui_ppal.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+        self.ui_ppal.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowMinimizeButtonHint)
 
         # Elementos ui principal
         self.txt_consola = self.ui_ppal.txt_consola
