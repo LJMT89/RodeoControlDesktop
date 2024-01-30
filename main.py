@@ -1,7 +1,8 @@
-import sys, os, socket
+import sys, os, socket, subprocess
 from PyQt5 import uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QTextEdit, QPlainTextEdit, QFileDialog, QDesktopWidget
 from PyQt5.QtCore import QProcess, Qt
+# from PyQt5.QtGui import QIcon
 
 basedir = os.path.dirname(__file__)
 
@@ -10,10 +11,14 @@ class LanzarServidor(QMainWindow):
         super().__init__()
 
         self.process = None  # Guarda una referencia al proceso para poder detenerlo
+        self.process_deactivate = None
+        self.process_kill_port = None
         self.txt_consola = None
-        self.script_path = '/media/jose/90980D73980D58DC/IDEAFIX/RodeoControl/Recursos/Script_Lanzador_Server/lanzar_rodeo.sh'
+        self.script_path = "D:\\IDEAFIX\\RodeoControl\\Repositorio\\Desktop\\RodeoControlDesktop\\bin\\runserver.bat"
         self.ip_local = ''
         self.puerto = 8000
+        # Configuración del ícono de la aplicación
+        # self.setWindowIcon(QIcon('.\image\la_travesada_48.ico'))
 
         self.init_ui()
 
@@ -45,6 +50,7 @@ class LanzarServidor(QMainWindow):
 
     def run_shell_script(self):
         self.btn_lanzar_server.setEnabled(False)
+        self.btn_salir.setEnabled(False)
         self.btn_detener_server.setEnabled(True)
         self.ip_local = self.obtener_ip_local()
         if self.ip_local:
@@ -54,13 +60,13 @@ class LanzarServidor(QMainWindow):
         
         if self.puerto_en_uso(self.puerto):
             self.kill_port(self.puerto)
-
+        
         self.txt_consola.clear()
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.MergedChannels)
         self.process.readyReadStandardOutput.connect(self.read_output)
         self.process.finished.connect(self.script_finished)
-        self.process.start(f'bash {self.script_path}')
+        self.process.start("cmd", ["/c", self.script_path])
 
     def read_output(self):
         self.btn_desconectado.setVisible(False)
@@ -71,6 +77,7 @@ class LanzarServidor(QMainWindow):
     def script_finished(self, exit_code, exit_status):
         self.btn_desconectado.setVisible(True)
         self.btn_lanzar_server.setEnabled(True)
+        self.btn_salir.setEnabled(True)
         self.btn_detener_server.setEnabled(False)
         self.lbl_ip_local.setText('......')
         self.txt_consola.appendPlainText(f"Script execution finished with exit code {exit_code}")
@@ -109,11 +116,32 @@ class LanzarServidor(QMainWindow):
             # Envía la señal de terminación al proceso
             self.process_deactivate.terminate()
     
-    def kill_port(self, puerto):
-        self.process_kill_port = QProcess(self)
-        self.process_kill_port.start(f'fuser -k {puerto}/tcp')
-        if self.process_kill_port and self.process_kill_port.state() == QProcess.Running:
-            self.process_kill_port.terminate()
+    def get_pid_list(self, port):
+        pid_list = []
+        netstat_output = subprocess.check_output(['netstat', '-ano'])
+        netstat_lines = netstat_output.decode(errors='ignore').split('\n')
+        for line in netstat_lines:
+            if f":{port}" in line:
+                parts = line.split()
+                if len(parts) >= 2:
+                    pid = parts[-1]
+                    if pid.isdigit():
+                        pid_list.append(pid)
+        return pid_list
+    
+    def kill_port(self, port):
+        pid_list = self.get_pid_list(port)
+        # print(f"Estos son los PIDS asociados al puerto {port}: {pid_list}")
+        if pid_list:
+            # print(f"Procesos encontrados asociados al puerto {port}: {', '.join(pid_list)}")
+            for pid in pid_list:
+                try:
+                    subprocess.run(['taskkill', '/F', '/PID', pid], check=True)
+                    print(f"Proceso con PID {pid} terminado exitosamente.")
+                except subprocess.CalledProcessError:
+                    print(f"No se pudo terminar el proceso con PID {pid}.")
+        else:
+            print(f"No se encontraron procesos asociados al puerto {port}.")
 
     #Función que finaliza la aplicación - Salir
     def salir_function(self):
