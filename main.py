@@ -14,7 +14,7 @@ class LanzarServidor(QMainWindow):
         self.process_deactivate = None
         self.process_kill_port = None
         self.txt_consola = None
-        self.script_path = "D:\\IDEAFIX\\RodeoControl\\Repositorio\\Desktop\\RodeoControlDesktop\\bin\\runserver.bat"
+        self.script_path = "D:\\IDEAFIX\\RodeoControl\\Repositorio\\Escritorio\\RodeoControlDesktop\\bin\\runserver.bat"
         self.ip_local = ''
         self.puerto = 8000
         # Configuración del ícono de la aplicación
